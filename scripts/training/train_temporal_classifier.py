@@ -77,6 +77,12 @@ EXP_NAME = "effv2s_gru_roi224_t35"
 SAVE_EVERY = 5
 PRINT_EVERY = 50
 
+# ---------- 早停（防过拟合） ----------
+EARLY_STOP = True
+EARLY_STOP_PATIENCE = 8       # 连续多少个 epoch 无提升就停止
+EARLY_STOP_MIN_DELTA = 0.0    # 认为“有提升”的最小 val_loss 下降
+EARLY_STOP_WARMUP = 0         # 前 N 个 epoch 不启用早停
+
 
 # ============================================================
 # ---------------------- 导入依赖 -----------------------------
@@ -493,6 +499,7 @@ def main():
     scaler = torch.cuda.amp.GradScaler(enabled=(USE_AMP and device.type == "cuda"))
 
     best_val = 1e18
+    bad_epochs = 0
 
     # 6) 训练循环
     for epoch in range(1, EPOCHS + 1):
@@ -500,15 +507,23 @@ def main():
         va_loss, va_acc = evaluate(model, val_loader, device, epoch)
 
         # 保存 best（以 val loss 为准）
-        if va_loss < best_val:
+        improved = va_loss < (best_val - EARLY_STOP_MIN_DELTA)
+        if improved:
             best_val = va_loss
             torch.save(model.state_dict(), os.path.join(OUT_DIR, EXP_NAME, "best.pt"))
+            bad_epochs = 0
+        else:
+            bad_epochs += 1
 
         # 定期保存
         if epoch % SAVE_EVERY == 0:
             torch.save(model.state_dict(), os.path.join(OUT_DIR, EXP_NAME, f"epoch_{epoch:03d}.pt"))
 
         print(f"[Epoch {epoch}] train={tr_loss:.4f} val={va_loss:.4f} acc={va_acc:.4f} best_val={best_val:.4f}")
+
+        if EARLY_STOP and epoch >= EARLY_STOP_WARMUP and bad_epochs >= EARLY_STOP_PATIENCE:
+            print(f"[EarlyStop] no val_loss improvement for {bad_epochs} epochs (best={best_val:.4f}). Stop.")
+            break
 
     # 保存 last
     torch.save(model.state_dict(), os.path.join(OUT_DIR, EXP_NAME, "last.pt"))

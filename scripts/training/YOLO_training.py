@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+    # -*- coding: utf-8 -*-
 """
 YOLOv11 从零训练（手写 PyTorch 训练循环 + 图片帧数据集）
 ========================================================
@@ -87,6 +87,12 @@ EXP_NAME = "y11_from_images_img1280"
 SAVE_EVERY_EPOCH = 5         # 每隔多少 epoch 额外保存 epoch_xxx.pt
 PRINT_EVERY = 20             # 每隔多少 step 输出一条 log（tqdm 同时也在显示）
 SAVE_CHECKPOINT_EVERY_STEPS = 0  # 0=关闭；>0 表示每 N step 存一次 checkpoint_last.pth（更安全）
+
+# ---------- 早停（防过拟合） ----------
+EARLY_STOP = True
+EARLY_STOP_PATIENCE = 10      # 连续多少个 epoch 无提升就停止
+EARLY_STOP_MIN_DELTA = 0.0    # 认为“有提升”的最小 val_loss 下降
+EARLY_STOP_WARMUP = 0         # 训练前 N 个 epoch 不启用早停
 
 # ---------- YOLOv11 模型 YAML ----------
 YOLO11_YAML = "ultralytics/cfg/models/11/yolo11.yaml"
@@ -757,6 +763,7 @@ def main():
     start_epoch = 1
     global_step = 0
     best_val = float("inf")
+    bad_epochs = 0
 
     if RESUME and os.path.exists(ckpt_path):
         print(f"[Resume] Loading checkpoint: {ckpt_path}")
@@ -783,9 +790,13 @@ def main():
         mem_peak = get_gpu_mem_gb_peak()
 
         # 保存 best/last/epoch_xxx
-        if va_loss < best_val:
+        improved = va_loss < (best_val - EARLY_STOP_MIN_DELTA)
+        if improved:
             best_val = va_loss
             torch.save(model.state_dict(), os.path.join(weights_dir, "best.pt"))
+            bad_epochs = 0
+        else:
+            bad_epochs += 1
 
         torch.save(model.state_dict(), os.path.join(weights_dir, "last.pt"))
 
@@ -814,6 +825,10 @@ def main():
 
         print(f"[Epoch {epoch}/{EPOCHS}] train_loss={tr_loss:.4f} val_loss={va_loss:.4f} best_val={best_val:.4f} "
               f"time={ep_time:.1f}s mem_peak={mem_peak:.2f}GB global_step={global_step}")
+
+        if EARLY_STOP and epoch >= EARLY_STOP_WARMUP and bad_epochs >= EARLY_STOP_PATIENCE:
+            print(f"[EarlyStop] no val_loss improvement for {bad_epochs} epochs (best={best_val:.4f}). Stop.")
+            break
 
     print("\n训练完成 ✅")
     print("结果目录：", os.path.abspath(out_dir))

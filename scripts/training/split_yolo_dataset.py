@@ -28,9 +28,13 @@ import random
 import argparse
 from pathlib import Path
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
 # -----------------------------
 # 默认超参（你也可以用命令行覆盖）
 # -----------------------------
+DEFAULT_INPUT_DIR = os.path.join(PROJECT_ROOT, "YOLO_training", "yolo_dataset")
+DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "YOLO_training", "yolo_dataset_split")
 DEFAULT_TRAIN = 0.8
 DEFAULT_VAL = 0.1
 DEFAULT_TEST = 0.1
@@ -196,8 +200,8 @@ names:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", type=str, default="./yolo_dataset", help="输入数据集目录（含 images/ labels/）")
-    ap.add_argument("--output", type=str, default="./yolo_dataset_split", help="输出目录")
+    ap.add_argument("--input", type=str, default=DEFAULT_INPUT_DIR, help="输入数据集目录（含 images/ labels/）")
+    ap.add_argument("--output", type=str, default=DEFAULT_OUTPUT_DIR, help="输出目录")
     ap.add_argument("--train", type=float, default=DEFAULT_TRAIN, help="训练集比例")
     ap.add_argument("--val", type=float, default=DEFAULT_VAL, help="验证集比例")
     ap.add_argument("--test", type=float, default=DEFAULT_TEST, help="测试集比例")
@@ -219,7 +223,12 @@ def main():
     images_dir = in_dir / "images"
     labels_dir = in_dir / "labels"
     if not images_dir.exists() or not labels_dir.exists():
-        raise FileNotFoundError("输入目录必须包含 images/ 和 labels/")
+        raise FileNotFoundError(
+            "输入目录必须包含 images/ 和 labels/。\n"
+            f"  input={in_dir.resolve()}\n"
+            f"  cwd={Path.cwd().resolve()}\n"
+            "  你可以用 --input 指定目录，或把当前工作目录切到项目根目录。"
+        )
 
     class_names = [x.strip() for x in args.names.split(",") if x.strip()]
     if not class_names:

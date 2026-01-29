@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 ========================================================
-Proc-only YOLO 手工标注器（逐帧画框 -> 导出 YOLO txt）
+Diff-only YOLO 手工标注器（逐帧画框 -> 导出 YOLO txt）
 ========================================================
 
 你的数据结构（示例）：
 ROOT_DIR/
   sample_0001/
-    xxx_proc.mp4   (文件名包含 "proc")
+    xxx_diff.mp4   (文件名包含 "diff")
     ...            (其它文件无所谓)
   sample_0002/
     yyy_proc.mp4
@@ -35,7 +35,7 @@ OUT_DIR/
 - q / ESC：退出
 
 注意：
-1) 本脚本只用 PROC 视频作为训练图像来源（不处理 diff）
+1) 本脚本只用 DIFF 视频作为训练图像来源（不处理 proc）
 2) 若你在无桌面GUI环境运行，OpenCV窗口可能无法创建，会直接报错提醒
 """
 
@@ -56,9 +56,9 @@ import numpy as np
 ROOT_DIR = os.path.join(PROJECT_ROOT, "data", "processed_sonar_video")  # 样本文件夹根目录（里面有很多子文件夹）
 OUT_DIR  = os.path.join(PROJECT_ROOT, "YOLO_training")  # 输出目录（会自动创建 images/labels）
 
-# -------- 如何在每个样本文件夹中找到 proc 视频 --------
+# -------- 如何在每个样本文件夹中找到 diff 视频 --------
 # 规则：在该文件夹内寻找“文件名包含 PROC_KEY”的视频文件（mp4/avi/mov/mkv/m4v）
-PROC_KEY = "proc"
+PROC_KEY = "diff"
 
 # -------- 导出设置 --------
 IMG_EXT = "jpg"      # 导出图片格式：jpg / png 都可以（一般 jpg 更省空间）
@@ -66,7 +66,7 @@ CLASS_ID = 0         # 只有一个类别（蛙人）就用 0
 
 # -------- 标注流程设置（你要的功能：从第几帧开始 / 隔几帧标一帧）--------
 START_FRAME = 0      # 从第几帧开始标（例如 200）
-STRIDE = 5           # 每次“步进/跳过/保存后跳转”的步长：例如 5 表示只标 0,5,10...
+STRIDE = 1           # 每次“步进/跳过/保存后跳转”的步长：例如 5 表示只标 0,5,10...
 SKIP_LABELED = True  # 若该帧已经存在 images+labels，则自动跳过（按 STRIDE 跳）
 
 # -------- OpenCV 显示窗口设置 --------
@@ -156,7 +156,7 @@ def yolo_line_from_box(box, img_w: int, img_h: int, class_id: int):
 
 class Annotator:
     """
-    一个样本（一个 proc 视频）对应一个 Annotator 实例
+    一个样本（一个 diff 视频）对应一个 Annotator 实例
     负责：
     - 打开视频
     - 逐帧读取
@@ -325,7 +325,7 @@ class Annotator:
     # ---------------------------
     def run(self):
         print(f"\n=== Annotating: {self.sample_name} ===")
-        print(f"proc: {self.proc_path}")
+        print(f"diff: {self.proc_path}")
         print(f"frames: {self.frame_count}, fps: {self.fps:.2f}, size: {self.w}x{self.h}")
         print(f"START_FRAME={START_FRAME}, STRIDE={STRIDE}, SKIP_LABELED={SKIP_LABELED}")
         print("\n快捷键：")
@@ -473,14 +473,14 @@ def main():
     for folder in folders:
         sample_name = os.path.basename(folder)
 
-        # 找 proc 视频
+        # 找 diff 视频
         proc_path = find_video_by_key(folder, PROC_KEY)
         if not proc_path:
-            print(f"[SKIP] {sample_name}: 找不到 proc 视频（文件名需包含 '{PROC_KEY}'）")
+            print(f"[SKIP] {sample_name}: 找不到 diff 视频（文件名需包含 '{PROC_KEY}'）")
             continue
 
         print(f"\n[OK] {sample_name}")
-        print("PROC =", proc_path)
+        print("DIFF =", proc_path)
 
         # 打开标注器
         ann = Annotator(proc_path, img_dir, lbl_dir, sample_name)

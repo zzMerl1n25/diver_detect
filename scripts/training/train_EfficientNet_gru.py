@@ -112,6 +112,12 @@ CONFIG = {
     # ---------------- 测试集评估 ----------------
     "EVAL_TEST_EVERY_EPOCH": False,   # True：每个epoch都跑一次test（慢）
     "EVAL_TEST_AT_END": True,         # True：训练结束跑一次test
+
+    # ---------------- 早停（防过拟合） ----------------
+    "EARLY_STOP": True,
+    "EARLY_STOP_PATIENCE": 10,        # 连续多少个 epoch 无提升就停止
+    "EARLY_STOP_MIN_DELTA": 0.0,      # 认为“有提升”的最小 val_loss 下降
+    "EARLY_STOP_WARMUP": 0,           # 前 N 个 epoch 不启用早停
 }
 
 
@@ -836,6 +842,7 @@ def main():
     start_epoch = 0
     global_step = 0
     best_val = 1e9
+    bad_epochs = 0
 
     resume_path = None
     if CONFIG["RESUME_CKPT"]:
@@ -926,14 +933,25 @@ def main():
                 test_metrics=test_metrics
             )
 
+            improved = val_loss < (best_val - float(CONFIG["EARLY_STOP_MIN_DELTA"]))
+            if improved:
+                best_val = val_loss
+                bad_epochs = 0
+            else:
+                bad_epochs += 1
+
             # 保存 last
             save_ckpt(last_path, model, optimizer, scaler, epoch, global_step, best_val, CONFIG)
 
             # 保存 best（按 val_loss）
-            if val_loss < best_val:
-                best_val = val_loss
+            if improved:
                 save_ckpt(best_path, model, optimizer, scaler, epoch, global_step, best_val, CONFIG)
                 print(f"[Best] saved: {best_path} (val_loss={best_val:.4f})")
+
+            if CONFIG["EARLY_STOP"] and epoch >= int(CONFIG["EARLY_STOP_WARMUP"]) and \
+               bad_epochs >= int(CONFIG["EARLY_STOP_PATIENCE"]):
+                print(f"[EarlyStop] no val_loss improvement for {bad_epochs} epochs (best={best_val:.4f}). Stop.")
+                break
 
     except KeyboardInterrupt:
         print("\n[Ctrl+C] Caught KeyboardInterrupt. Saving step checkpoint then exit...")
