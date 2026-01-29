@@ -459,7 +459,12 @@ def load_checkpoint(
     device: torch.device,
     ema: Optional[ModelEMA] = None
 ):
-    ckpt = torch.load(ckpt_path, map_location=device)
+    # PyTorch 2.6 defaults weights_only=True; our checkpoints include optimizer/scaler/RNG, so load fully.
+    try:
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+    except TypeError:
+        # Older PyTorch versions don't support weights_only.
+        ckpt = torch.load(ckpt_path, map_location=device)
 
     model.load_state_dict(ckpt["model"], strict=True)
     optimizer.load_state_dict(ckpt["optimizer"])
