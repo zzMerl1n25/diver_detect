@@ -97,7 +97,7 @@ DEVICE = "cuda"  # cuda/cpu
 # YOLO 输入类型：
 # - "raw": 原始视频帧，需执行 preprocess_frame
 # - "proc": 已预处理好的视频帧，直接用于 YOLO（不再重复 preprocess）
-YOLO_INPUT_MODE = "proc"
+YOLO_INPUT_MODE = "diff"
 
 # 视频帧范围（原视频帧号）
 START_FRAME = 0  # 从第几帧开始
@@ -167,23 +167,28 @@ YOLO_SAVE_JSON = True  # 是否保存 detections.json
 # ✅ 若 Action 使用 diff 作为输入，必须输出 diff_base.mp4
 YOLO_SAVE_DIFF_BASE = True   # 纯diff底图（无框）
 YOLO_SAVE_OVERLAY = True     # 输出 yolo_overlay_diff（diff底图+框）
-# 只保留“置信度最高”的检测框（单目标场景更稳定）
-YOLO_TOP1_ONLY = True
+# 是否只保留“置信度最高”的检测框
+# True：单目标更稳定；False：保留所有候选框（更“全”）
+YOLO_TOP1_ONLY = False
 
 # ------------------ Tracking 参数（与你现有一致） ------------------
 # IoU 匹配阈值（越大越严格）
-IOU_MATCH_THRES = 0.30
+IOU_MATCH_THRES = 0.5
 # 轨迹最大“失配”帧数（超出即删除）
 MAX_AGE = 20
 
 # 轨迹有效性门槛（summary/clip 用）
 MIN_HITS = 5
 # 平均置信度门槛
-MIN_MEAN_CONF = 0.25
+MIN_MEAN_CONF = 0.50
 # 是否先过滤低置信检测框
 USE_CONF_FILTER = True
 # 低置信过滤阈值（检测层）
-CONF_FILTER = 0.20
+CONF_FILTER = 0.70
+
+# ✅ 显示/写出全部轨迹（不做短轨/低置信过滤）
+# 说明：开启后会跳过 should_show_track 过滤，并不再过滤低置信检测框
+TRACK_SHOW_ALL = True
 
 # 显示/写出轨迹的闸门（决定 tracks.csv 是否写入）
 MIN_HITS_TO_SHOW = 2  # 轨迹命中多少帧才开始展示/写出
@@ -218,7 +223,7 @@ ACTION_CKPT = os.path.join(ROOT_DIR, "EfficientNet_training", "runs_action", "ef
 # Action 输入类型：
 # - "raw": 原始视频帧（内部会做 preprocess_frame）
 # - "diff": 已生成的 diff 视频帧（不再做 preprocess_frame）
-ACTION_INPUT_MODE = "diff"
+ACTION_INPUT_MODE = "raw"
 # 每条轨迹采样多少帧做动作分类（与训练采样一致更稳）
 ACTION_NUM_FRAMES = 16
 # ROI 输入尺寸（模型输入）
@@ -239,6 +244,11 @@ ACTION_LABEL_NAMES = {
     0: "非蛙人",
     1: "蛙人",
 }
+
+# ✅ 叠字时是否显示“所有类别概率”（而不是只显示预测类）
+ACTION_SHOW_ALL_PROBS = True
+# 多分类时显示 top-k（<=0 表示显示全部）
+ACTION_PROB_TOPK = 3
 
 # ✅ 输出“带类别文字”的视频参数（基于 tracked_overlay.mp4）
 # 叠字大小
@@ -878,6 +888,7 @@ def tracking_stage(detections_csv: str, base_video_path: str, out_dir: str) -> T
     df = pd.read_csv(detections_csv)
 
     df = df.sort_values(["frame_id", "conf"], ascending=[True, False]).reset_index(drop=True)
+    # 低置信检测过滤：即使 TRACK_SHOW_ALL=True 也依然生效
     if USE_CONF_FILTER:
         df = df[df["conf"] >= CONF_FILTER].reset_index(drop=True)
 
@@ -961,7 +972,13 @@ def tracking_stage(detections_csv: str, base_video_path: str, out_dir: str) -> T
         else:
             vis = frame.copy()
         for t in tracks:
-            if should_show_track(t, frame_id):
+            # 是否显示/写出该轨迹
+            if TRACK_SHOW_ALL:
+                show = (t.history and t.history[-1][0] == frame_id)
+            else:
+                show = should_show_track(t, frame_id)
+
+            if show:
                 det_vis = {"cls": t.cls, "conf": t.history[-1][2], "xyxy": t.xyxy}
                 draw_track(vis, det_vis, tid=t.tid)
 
@@ -1203,13 +1220,37 @@ def _text_for_pred(num_classes: int, pred: int, probs: List[float]) -> Tuple[str
     """
     label_name = ACTION_LABEL_NAMES.get(int(pred), f"class_{int(pred)}")
 
-    prob_txt = ""
-    if num_classes == 1 and len(probs) >= 1:
-        prob_txt = f"{float(probs[0]):.2f}"
-    elif num_classes > 1 and 0 <= int(pred) < len(probs):
-        prob_txt = f"{float(probs[int(pred)]):.2f}"
+    # 默认：只显示预测类概率
+    if not ACTION_SHOW_ALL_PROBS:
+        prob_txt = ""
+        if num_classes == 1 and len(probs) >= 1:
+            prob_txt = f"{float(probs[0]):.2f}"
+        elif num_classes > 1 and 0 <= int(pred) < len(probs):
+            prob_txt = f"{float(probs[int(pred)]):.2f}"
+        return label_name, prob_txt
 
-    return label_name, prob_txt
+    # 显示“所有类别概率”
+    if num_classes == 1 and len(probs) >= 1:
+        p1 = float(probs[0])
+        p0 = 1.0 - p1
+        n0 = ACTION_LABEL_NAMES.get(0, "class_0")
+        n1 = ACTION_LABEL_NAMES.get(1, "class_1")
+        return label_name, f"{n0}:{p0:.2f} {n1}:{p1:.2f}"
+
+    if num_classes > 1 and len(probs) > 0:
+        pairs = []
+        for i, p in enumerate(probs):
+            name = ACTION_LABEL_NAMES.get(i, f"class_{i}")
+            pairs.append((i, float(p), name))
+        # 排序取 top-k
+        pairs.sort(key=lambda x: x[1], reverse=True)
+        k = int(ACTION_PROB_TOPK)
+        if k <= 0 or k > len(pairs):
+            k = len(pairs)
+        txt = " ".join([f"{n}:{p:.2f}" for _, p, n in pairs[:k]])
+        return label_name, txt
+
+    return label_name, ""
 
 def _ensure_3ch(img: np.ndarray) -> np.ndarray:
     if img.ndim == 2:
