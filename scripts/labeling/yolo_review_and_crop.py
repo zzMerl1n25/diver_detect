@@ -63,6 +63,10 @@ CONFIG = {
     "DIFF_FILENAME": "diff.mp4",  # 在每个子文件夹里寻找的 diff 视频名
     "SKIP_IF_NO_DIFF": True,  # 若找不到 diff 视频是否跳过该子文件夹
 
+    # 训练 clips 的视频来源（通常用 proc 而不是 diff）
+    "PROC_FILENAME": "proc.mp4",  # 每个子文件夹里的 proc 视频名
+    "CLIP_SOURCE": "proc",  # "proc" | "diff"
+
     # 从第几个子文件夹开始（两种任选一种）
     "START_INDEX_0BASED": 0,  # 0 表示从第一个子文件夹开始
     "START_INDEX_1BASED": None,  # 设为 None 表示不用（若填写将覆盖 0based）
@@ -534,7 +538,7 @@ def export_labeled_clips(
 # 单视频处理：review + export
 # 返回 stop_all(bool)
 # ============================================================
-def process_one_video(model: YOLO, folder_id: str, video_path: str) -> bool:
+def process_one_video(model: YOLO, folder_id: str, diff_path: str, proc_path: Optional[str]) -> bool:
     # 输出路径
     ensure_dir(CONFIG["OUT_CSV_DIR"])
     ensure_dir(CONFIG["OUT_CROPPED_ALL_DIR"])
@@ -544,9 +548,9 @@ def process_one_video(model: YOLO, folder_id: str, video_path: str) -> bool:
     out_crop_all = os.path.join(CONFIG["OUT_CROPPED_ALL_DIR"], f"{folder_id}_cropped_all.mp4")
     out_overlay_all = os.path.join(CONFIG["OUT_OVERLAY_ALL_DIR"], f"{folder_id}_overlay_all.mp4")
 
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(diff_path)
     if not cap.isOpened():
-        print(f"[Skip] Cannot open video: {video_path}")
+        print(f"[Skip] Cannot open video: {diff_path}")
         return False
 
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -556,7 +560,7 @@ def process_one_video(model: YOLO, folder_id: str, video_path: str) -> bool:
 
     if total_frames <= 0 or vw <= 0 or vh <= 0:
         cap.release()
-        print(f"[Skip] Bad meta: frames={total_frames} size=({vw},{vh}) video={video_path}")
+        print(f"[Skip] Bad meta: frames={total_frames} size=({vw},{vh}) video={diff_path}")
         return False
 
     boxes_by_frame, labels_by_frame, last_done = load_progress_csv(csv_path)
@@ -732,9 +736,9 @@ def process_one_video(model: YOLO, folder_id: str, video_path: str) -> bool:
     # ==========================
     # 导出 cropped_all / overlay_all
     # ==========================
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(diff_path)
     if not cap.isOpened():
-        print(f"[SkipExport] Cannot reopen video: {video_path}")
+        print(f"[SkipExport] Cannot reopen video: {diff_path}")
         return stop_all
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -778,14 +782,20 @@ def process_one_video(model: YOLO, folder_id: str, video_path: str) -> bool:
     cap.release()
 
     print(f"[Done] {folder_id}")
-    print("  Diff        :", os.path.abspath(video_path))
+    print("  Diff        :", os.path.abspath(diff_path))
     print("  CSV         :", os.path.abspath(csv_path))
     print("  Cropped ALL :", os.path.abspath(out_crop_all))
     if CONFIG["EXPORT_OVERLAY"]:
         print("  Overlay ALL :", os.path.abspath(out_overlay_all))
 
     # ✅ 按标签导出训练 clips（直接可用于 EfficientNet+GRU）
-    export_labeled_clips(folder_id, video_path, boxes_by_frame, labels_by_frame)
+    clip_source = str(CONFIG.get("CLIP_SOURCE", "proc")).lower().strip()
+    clip_video = proc_path if (clip_source == "proc") else diff_path
+    if clip_source == "proc" and (not proc_path or (not os.path.isfile(proc_path))):
+        print(f"[Warn] proc 视频不存在，回退到 diff 导出 clips: {proc_path}")
+        clip_video = diff_path
+    export_labeled_clips(folder_id, clip_video, boxes_by_frame, labels_by_frame)
+    print("  Clips Src   :", os.path.abspath(clip_video))
 
     return stop_all
 
@@ -805,8 +815,9 @@ def main():
     tasks = []
     for sf in subfolders:
         diff_path = os.path.join(sf, CONFIG["DIFF_FILENAME"])
+        proc_path = os.path.join(sf, CONFIG["PROC_FILENAME"])
         if os.path.exists(diff_path):
-            tasks.append((safe_id_from_folder(sf), diff_path))
+            tasks.append((safe_id_from_folder(sf), diff_path, proc_path))
         else:
             if CONFIG["SKIP_IF_NO_DIFF"]:
                 continue
@@ -833,13 +844,13 @@ def main():
     )
 
     for i in range(start_idx, len(tasks)):
-        folder_id, diff_video = tasks[i]
+        folder_id, diff_video, proc_video = tasks[i]
         print("\n====================================================")
         print(f"[Task {i}/{len(tasks)-1}] {folder_id}")
         print(os.path.abspath(diff_video))
         print("====================================================")
 
-        stop_all = process_one_video(model, folder_id, diff_video)
+        stop_all = process_one_video(model, folder_id, diff_video, proc_video)
         if stop_all:
             print("\n[StopAll] user pressed 'x' -> stop processing remaining folders.")
             break

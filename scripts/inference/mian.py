@@ -167,6 +167,8 @@ YOLO_SAVE_JSON = True  # 是否保存 detections.json
 # ✅ 若 Action 使用 diff 作为输入，必须输出 diff_base.mp4
 YOLO_SAVE_DIFF_BASE = True   # 纯diff底图（无框）
 YOLO_SAVE_OVERLAY = True     # 输出 yolo_overlay_diff（diff底图+框）
+# 只保留“置信度最高”的检测框（单目标场景更稳定）
+YOLO_TOP1_ONLY = True
 
 # ------------------ Tracking 参数（与你现有一致） ------------------
 # IoU 匹配阈值（越大越严格）
@@ -522,6 +524,13 @@ def yolo_predict_one_frame(yolo_model, frame_bgr: np.ndarray) -> List[Dict[str, 
         })
     return dets
 
+def keep_top1_det(dets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """只保留置信度最高的一框（用于单目标/避免多框干扰）"""
+    if not dets:
+        return dets
+    best = max(dets, key=lambda d: float(d.get("conf", 0.0)))
+    return [best]
+
 def proc_to_gray_u8(proc_frame: np.ndarray) -> np.ndarray:
     if proc_frame.ndim == 2:
         g = proc_frame
@@ -680,6 +689,8 @@ def yolo_stage(video_path: str, out_dir: str, input_mode: Optional[str] = None) 
                 frame_proc = preprocess_frame(frame_work, sector_mask)  # proc 输入 YOLO
 
             dets_proc = yolo_predict_one_frame(yolo, frame_proc)
+            if YOLO_TOP1_ONLY:
+                dets_proc = keep_top1_det(dets_proc)
 
             proc_gray = proc_to_gray_u8(frame_proc)
             if prev_proc_gray is None:
