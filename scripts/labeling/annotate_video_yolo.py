@@ -23,16 +23,18 @@ OUT_DIR/
 交互操作：
 - 鼠标左键拖拽：添加一个框（可多个）
 - d：删除最后一个框
-- x：清空当前帧所有框
+- n：清空当前帧所有框（无目标）
 - c：复制上一帧框到当前帧（省时神器）
 - s：保存当前帧（不跳帧）
-- n：保存并跳到 idx + STRIDE（按步长走）
+- 空格/回车：保存并跳到 idx + STRIDE（按步长走）
+- b：保存并跳到 idx - STRIDE（按步长走）
 - ]：不保存，跳到 idx + STRIDE
 - [：不保存，跳到 idx - STRIDE
 - .：不保存，前进 1 帧
 - ,：不保存，后退 1 帧
 - g：跳转到指定帧（在控制台输入帧号）
-- q / ESC：退出
+- q / ESC：保存并结束当前视频（继续下一个）
+- x：保存并停止全部
 
 注意：
 1) 本脚本只用 DIFF 视频作为训练图像来源（不处理 proc）
@@ -346,14 +348,16 @@ class Annotator:
         print(f"START_FRAME={START_FRAME}, STRIDE={STRIDE}, SKIP_LABELED={SKIP_LABELED}")
         print("\n快捷键：")
         print("  鼠标左键拖拽：画框（可多个）")
-        print("  d：删除最后一个框 | x：清空本帧 | c：复制上一帧框")
+        print("  d：删除最后一个框 | n：清空本帧（无目标） | c：复制上一帧框")
         print("  s：仅保存")
-        print("  n：保存并跳到 idx + STRIDE")
+        print("  空格/回车：保存并跳到 idx + STRIDE | b：保存并跳到 idx - STRIDE")
         print("  ]：不保存跳 idx + STRIDE | [：不保存跳 idx - STRIDE")
         print("  .：前进 1 帧 | ,：后退 1 帧（不保存）")
         print("  g：跳转到指定帧（控制台输入帧号）")
-        print("  q / ESC：退出\n")
+        print("  q / ESC：保存并结束当前视频（继续下一个）")
+        print("  x：保存并停止全部\n")
 
+        stop_all = False
         while True:
             # 到末尾就结束
             if self.idx >= self.frame_count:
@@ -402,9 +406,17 @@ class Annotator:
             # 等待键盘（20ms 刷新，足够流畅）
             key = cv2.waitKey(20) & 0xFF
 
-            # ========== 退出 ==========
+            # ========== 退出/停止 ==========
             if key == 27 or key == ord('q'):
-                print("退出。")
+                self.save_current(frame)
+                self.prev_boxes = list(self.boxes)
+                print(f"Saved frame {self.idx} (exit current)")
+                break
+            elif key == ord('x'):
+                self.save_current(frame)
+                self.prev_boxes = list(self.boxes)
+                print(f"Saved frame {self.idx} (stop all)")
+                stop_all = True
                 break
 
             # ========== 编辑框 ==========
@@ -412,7 +424,7 @@ class Annotator:
                 if self.boxes:
                     self.boxes.pop()
 
-            elif key == ord('x'):     # 清空所有框
+            elif key == ord('n'):     # 清空所有框（无目标）
                 self.boxes = []
 
             elif key == ord('c'):     # 复制上一帧框
@@ -424,11 +436,15 @@ class Annotator:
                 self.prev_boxes = list(self.boxes)
                 print(f"Saved frame {self.idx}")
 
-            elif key == ord('n'):     # 保存并跳到 idx + STRIDE
+            elif key == ord(' ') or key == 13:  # 保存并跳到 idx + STRIDE
                 self.save_current(frame)
                 self.prev_boxes = list(self.boxes)
-                self.boxes = []
-                self.idx += STRIDE
+                self.jump_to(self.idx + STRIDE)
+
+            elif key == ord('b'):     # 保存并跳到 idx - STRIDE
+                self.save_current(frame)
+                self.prev_boxes = list(self.boxes)
+                self.jump_to(self.idx - STRIDE)
 
             # ========== 跳帧（不保存）==========
             elif key == ord(']'):     # 跳到 idx + STRIDE
@@ -459,6 +475,7 @@ class Annotator:
         # 释放资源
         self.cap.release()
         cv2.destroyAllWindows()
+        return stop_all
 
 
 # ========================================================
@@ -500,7 +517,10 @@ def main():
 
         # 打开标注器
         ann = Annotator(proc_path, img_dir, lbl_dir, sample_name)
-        ann.run()
+        stop_all = ann.run()
+        if stop_all:
+            print("[Stop] user requested to stop all.")
+            break
 
     print("\n全部处理完成。输出目录：")
     print(os.path.abspath(OUT_DIR))
