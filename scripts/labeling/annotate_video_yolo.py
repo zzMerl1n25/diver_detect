@@ -53,35 +53,51 @@ import numpy as np
 # ========================================================
 
 # -------- 数据路径相关 --------
-ROOT_DIR = os.path.join(PROJECT_ROOT, "data", "processed_sonar_video")  # 样本文件夹根目录（里面有很多子文件夹）
-OUT_DIR  = os.path.join(PROJECT_ROOT, "YOLO_training")  # 输出目录（会自动创建 images/labels）
+# 样本文件夹根目录（里面有很多子文件夹，每个子文件夹一个视频）
+ROOT_DIR = os.path.join(PROJECT_ROOT, "data", "processed_sonar_video")
+# 输出目录（会自动创建 images/labels；用于 YOLO 训练）
+OUT_DIR  = os.path.join(PROJECT_ROOT, "YOLO_training")
 
 # -------- 如何在每个样本文件夹中找到 diff 视频 --------
 # 规则：在该文件夹内寻找“文件名包含 PROC_KEY”的视频文件（mp4/avi/mov/mkv/m4v）
+# 例：diff.mp4 / xxx_diff.mp4
 PROC_KEY = "diff"
 
 # -------- 导出设置 --------
-IMG_EXT = "jpg"      # 导出图片格式：jpg / png 都可以（一般 jpg 更省空间）
-CLASS_ID = 0         # 只有一个类别（蛙人）就用 0
+# 导出图片格式：jpg / png 都可以（一般 jpg 更省空间）
+IMG_EXT = "jpg"
+# 目标类别 ID（只有一个类别就用 0；多类时要匹配训练）
+CLASS_ID = 0
 
 # -------- 标注流程设置（你要的功能：从第几帧开始 / 隔几帧标一帧）--------
-START_FRAME = 0      # 从第几帧开始标（例如 200）
-STRIDE = 1           # 每次“步进/跳过/保存后跳转”的步长：例如 5 表示只标 0,5,10...
-SKIP_LABELED = True  # 若该帧已经存在 images+labels，则自动跳过（按 STRIDE 跳）
+# 从第几帧开始标（例如 200 表示跳过前 200 帧）
+START_FRAME = 0
+# 每次“步进/跳过/保存后跳转”的步长：例如 5 表示只标 0,5,10...
+STRIDE = 1
+# 若该帧已存在 images+labels，则自动跳过（按 STRIDE 跳）
+SKIP_LABELED = True
 
 # -------- OpenCV 显示窗口设置 --------
-WINDOW_NORMAL = True   # True：可调整窗口大小；False：固定大小
-FONT_SCALE = 0.85      # 画面左上角信息文字大小
-TEXT_THICKNESS = 2     # 文字粗细
+# True：可调整窗口大小；False：固定大小
+WINDOW_NORMAL = True
+# 画面左上角信息文字大小
+FONT_SCALE = 0.85
+# 文字粗细
+TEXT_THICKNESS = 2
 
 # -------- 画框显示设置（仅影响显示，不影响导出）--------
-BOX_COLOR = (0, 255, 0)        # 已确认框的颜色（BGR）
-BOX_THICKNESS = 2              # 已确认框线粗
-DRAG_COLOR = (0, 255, 255)     # 鼠标拖拽中框颜色（BGR）
-DRAG_THICKNESS = 2             # 拖拽框线粗
+# 已确认框的颜色（BGR）
+BOX_COLOR = (0, 255, 0)
+# 已确认框线粗
+BOX_THICKNESS = 2
+# 鼠标拖拽中框颜色（BGR）
+DRAG_COLOR = (0, 255, 255)
+# 拖拽框线粗
+DRAG_THICKNESS = 2
 
 # -------- 安全保护 --------
-MIN_BOX_SIZE = 2   # 鼠标拖出来的框，宽/高至少多少像素才算有效（防止误点）
+# 鼠标拖出来的框，宽/高至少多少像素才算有效（防止误点）
+MIN_BOX_SIZE = 2
 
 
 # ========================================================

@@ -37,76 +37,117 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 # ============================================================
 
 # ---------- 路径配置 ----------
+# 训练/验证数据集根目录（必须包含 images/labels 的 train/val 子目录）
 DATASET_ROOT = os.path.join(PROJECT_ROOT, "YOLO_training", "yolo_dataset_split")
+# 训练集图片目录（YOLO图像）
 TRAIN_IMAGES_DIR = f"{DATASET_ROOT}/images/train"
+# 验证集图片目录
 VAL_IMAGES_DIR   = f"{DATASET_ROOT}/images/val"
+# 训练集标签目录（YOLO txt）
 TRAIN_LABELS_DIR = f"{DATASET_ROOT}/labels/train"
+# 验证集标签目录
 VAL_LABELS_DIR   = f"{DATASET_ROOT}/labels/val"
 
 # ---------- 类别数 ----------
+# 目标类别数（必须与你的标签一致；单类就设 1）
 NC = 1
 
 # ---------- 输入尺寸 ----------
+# YOLO 训练输入尺寸（正方形 letterbox；越大越精细但更耗显存/更慢）
 IMGSZ = 1280
 
 # ---------- 训练基础参数 ----------
+# 总训练轮数（epoch 越多越可能过拟合；配合 early stop）
 EPOCHS = 120
+# 单步批大小（受显存限制；与 GRAD_ACCUM_STEPS 共同决定等效 batch）
 BATCH_SIZE = 4
+# DataLoader 线程数（越大越快但更吃 CPU/内存）
 NUM_WORKERS = 4
+# 训练设备：cuda/cpu
 DEVICE = "cuda"           # "cuda" / "cpu"
+# 随机种子（保证可复现）
 SEED = 42
 
 # ---------- 优化器 ----------
+# 学习率（基础步长；过大易发散，过小收敛慢）
 LR = 1e-3
+# 权重衰减（L2 正则；抑制过拟合，过大易欠拟合）
 WEIGHT_DECAY = 5e-4
+# 动量（仅 SGD 有效；平滑梯度）
 MOMENTUM = 0.9
+# 选择优化器：sgd / adamw（adamw 对小 batch 更稳）
 OPTIM = "adamw"           # "sgd" or "adamw"
 
 # ---------- AMP ----------
+# 自动混合精度（省显存/加速；数值不稳定时可关）
 USE_AMP = True
 
 # ---------- 梯度累积 ----------
+# 累积 N 次再更新一次，相当于“等效 batch = BATCH_SIZE * N”
 GRAD_ACCUM_STEPS = 2
 
 # ---------- EMA（建议先关，跑通再开） ----------
+# 使用指数滑动平均权重（验证更稳但训练更慢）
 USE_EMA = False
+# EMA 衰减系数（越接近 1 越“慢更新”）
 EMA_DECAY = 0.9998
 
 # ---------- 轻量增强 ----------
+# 左右翻转概率（对朝向不敏感目标有用）
 AUG_HFLIP_P = 0.5
+# 亮度抖动幅度（0.15 表示较轻微）
 AUG_BRIGHTNESS = 0.15
+# 对比度抖动幅度
 AUG_CONTRAST = 0.15
 
 # ---------- 数据过滤 ----------
-ONLY_LABELED = False   # True: 只保留有label的图片；False: 允许空label
+# True：只保留有 label 的图片；False：允许空标签（无目标帧）
+ONLY_LABELED = False
 
 # ---------- 日志与保存 ----------
+# 训练输出目录（会在其下创建本次实验文件夹）
 RUN_DIR = os.path.join(PROJECT_ROOT, "YOLO_training", "runs_yolo11_from_scratch")
+# 本次实验名（用于区分不同配置）
 EXP_NAME = "y11_from_images_img1280"
 
-SAVE_EVERY_EPOCH = 5         # 每隔多少 epoch 额外保存 epoch_xxx.pt
-PRINT_EVERY = 20             # 每隔多少 step 输出一条 log（tqdm 同时也在显示）
-SAVE_CHECKPOINT_EVERY_STEPS = 0  # 0=关闭；>0 表示每 N step 存一次 checkpoint_last.pth（更安全）
+# 每隔多少 epoch 额外保存一次 epoch_xxx.pt（便于回滚）
+SAVE_EVERY_EPOCH = 5
+# 每隔多少 step 打印一次日志（tqdm 也会显示）
+PRINT_EVERY = 20
+# 每 N step 存一次 checkpoint_last.pth（0=关闭；更安全但更慢）
+SAVE_CHECKPOINT_EVERY_STEPS = 0
 
 # ---------- 早停（防过拟合） ----------
+# 是否启用早停
 EARLY_STOP = True
-EARLY_STOP_PATIENCE = 10      # 连续多少个 epoch 无提升就停止
-EARLY_STOP_MIN_DELTA = 0.0    # 认为“有提升”的最小 val_loss 下降
-EARLY_STOP_WARMUP = 0         # 训练前 N 个 epoch 不启用早停
+# 连续多少个 epoch 无提升就停止
+EARLY_STOP_PATIENCE = 10
+# 认为“有提升”的最小 val_loss 下降
+EARLY_STOP_MIN_DELTA = 0.0
+# 训练前 N 个 epoch 不启用早停（预热期）
+EARLY_STOP_WARMUP = 0
 
 # ---------- YOLOv11 模型 YAML ----------
+# 模型结构配置（用于构建 DetectionModel）
 YOLO11_YAML = "ultralytics/cfg/models/11/yolo11.yaml"
 
 # ---------- Loss 超参（给 Ultralytics loss 用） ----------
+# Box 回归 loss 权重（越大越重视定位）
 LOSS_BOX = 7.5
+# 分类 loss 权重（单类任务可较小）
 LOSS_CLS = 0.5
+# DFL（分布式回归）权重（影响边框精细度）
 LOSS_DFL = 1.5
+# 标签平滑（0 表示关闭；缓解过拟合）
 LABEL_SMOOTHING = 0.0
+# Focal loss gamma（0 表示关闭；提升难样本权重）
 FL_GAMMA = 0.0
 
 # ---------- 断点续训 ----------
+# 是否自动从 checkpoint 恢复
 RESUME = True
-RESUME_PATH = ""     # 留空表示从“输出目录/checkpoint_last.pth”恢复；填路径表示从指定 checkpoint 恢复
+# 留空表示从“输出目录/checkpoint_last.pth”恢复；填路径表示从指定 checkpoint 恢复
+RESUME_PATH = ""
 
 
 # ============================================================
@@ -523,6 +564,13 @@ def train_one_epoch(
     best_val: float,
     ema: Optional[ModelEMA],
 ):
+    """
+    单个 epoch 的训练逻辑：
+    - 组装 Ultralytics 所需的 batch 格式
+    - 前向 + loss
+    - 梯度累积 + AMP
+    - EMA 更新 + 中途 checkpoint
+    """
     model.train()
     optimizer.zero_grad(set_to_none=True)
 
@@ -600,6 +648,11 @@ def train_one_epoch(
 
 @torch.no_grad()
 def validate(model: DetectionModel, loader: DataLoader, device: torch.device, epoch: int):
+    """
+    验证集循环：
+    - 与训练同样的 batch 结构
+    - 只前向 + 统计平均 loss
+    """
     model.eval()
     running_loss = 0.0
 

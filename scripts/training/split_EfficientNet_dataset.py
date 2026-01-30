@@ -51,30 +51,32 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 CONFIG = {
     # 输入数据集根目录（里面有 label_0/ label_1/ ...）
     "DATA_ROOT": os.path.join(PROJECT_ROOT, "video_dataset_process", "labeled_clips"),
+    # 类别子目录前缀（label_0/label_1/...）
     "LABEL_PREFIX": "label_",
 
-    # 输出根目录
+    # 输出根目录（会生成 train/val/test 子目录和 splits/ 列表）
     "OUT_ROOT": os.path.join(PROJECT_ROOT, "EfficientNet_training", "splitted_dataset"),
 
-    # 划分比例（必须加起来 = 1.0）
-    "RATIO_TRAIN": 0.7,
-    "RATIO_VAL": 0.2,
-    "RATIO_TEST": 0.1,
+    # 划分比例（必须加起来 = 1.0；比例越大样本越多）
+    "RATIO_TRAIN": 0.7,  # 训练集比例（主训练用）
+    "RATIO_VAL": 0.2,    # 验证集比例（调参/早停用）
+    "RATIO_TEST": 0.1,   # 测试集比例（最终评估用）
 
-    # 随机种子（保证可复现）
+    # 随机种子（保证可复现的划分）
     "RANDOM_SEED": 42,
 
-    # 支持的视频扩展名
+    # 支持的视频扩展名（不会处理不在列表里的文件）
     "VIDEO_EXTS": [".mp4", ".avi", ".mov", ".mkv"],
 
     # 输出方式：
-    # "copy"：复制到 OUT_ROOT/train|val|test 下
-    # "move"：移动（会破坏原数据，慎用）
+    # "copy"：复制到 OUT_ROOT/train|val|test 下（不破坏原始数据）
+    # "move"：移动到 OUT_ROOT（会破坏原数据，慎用）
     # "list_only"：不复制不移动，只输出 split_*.txt 列表
     "MODE": "copy",
 
     # 如果目标文件已存在怎么处理：
-    # True：跳过；False：覆盖
+    # True：跳过已存在文件（更安全）
+    # False：覆盖已存在文件（可能更慢）
     "SKIP_IF_EXISTS": True,
 }
 

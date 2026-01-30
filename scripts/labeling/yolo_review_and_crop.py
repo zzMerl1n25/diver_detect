@@ -58,47 +58,48 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 # ============================================================
 CONFIG = {
     # -------- 输入根目录（包含很多子文件夹）--------
+    # 每个子文件夹里应有 diff.mp4（或 DIFF_FILENAME 指定的名字）
     "IN_ROOT": os.path.join(PROJECT_ROOT, "data", "processed_sonar_video"),
-    "DIFF_FILENAME": "diff.mp4",
-    "SKIP_IF_NO_DIFF": True,
+    "DIFF_FILENAME": "diff.mp4",  # 在每个子文件夹里寻找的 diff 视频名
+    "SKIP_IF_NO_DIFF": True,  # 若找不到 diff 视频是否跳过该子文件夹
 
     # 从第几个子文件夹开始（两种任选一种）
-    "START_INDEX_0BASED": 0,
-    "START_INDEX_1BASED": None,  # 设为 None 表示不用
+    "START_INDEX_0BASED": 0,  # 0 表示从第一个子文件夹开始
+    "START_INDEX_1BASED": None,  # 设为 None 表示不用（若填写将覆盖 0based）
 
     # -------- 输出目录（分开）--------
-    "OUT_CSV_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "csv"),
-    "OUT_CROPPED_ALL_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "cropped_all"),
-    "OUT_OVERLAY_ALL_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "overlay_all"),
+    "OUT_CSV_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "csv"),  # 每个视频的逐帧标注 CSV
+    "OUT_CROPPED_ALL_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "cropped_all"),  # 全部 ROI 预览视频
+    "OUT_OVERLAY_ALL_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "overlay_all"),  # 全部 overlay 视频
 
     # ✅ 按标签导出训练 clips（推荐直接用它训练 EfficientNet+GRU）
-    "EXPORT_LABELED_CLIPS": True,
+    "EXPORT_LABELED_CLIPS": True,  # 是否导出分段 clips
     "OUT_LABELED_CLIPS_DIR": os.path.join(PROJECT_ROOT, "video_dataset_process", "labeled_clips"),
-    "CLIP_SECONDS": 5.0,
-    "STRIDE_SECONDS": 5.0,          # =5 表示不重叠；=1 表示滑窗每秒取一段
-    "DROP_LAST_SHORT": True,
-    "CLIP_LABEL_RULE": "majority",  # "majority" | "all_same"
-    "SKIP_UNLABELED_CLIPS": True,   # True: clip里label全是-1或多数为-1就跳过
+    "CLIP_SECONDS": 5.0,  # 每个 clip 的时长（秒）
+    "STRIDE_SECONDS": 5.0,  # 相邻 clips 间隔（=5 表示不重叠；=1 表示滑窗）
+    "DROP_LAST_SHORT": True,  # 不足一个 clip 时长的尾段是否丢弃
+    "CLIP_LABEL_RULE": "majority",  # "majority" | "all_same"：如何决定 clip 标签
+    "SKIP_UNLABELED_CLIPS": True,  # True: clip里label全是-1或多数为-1就跳过
 
     # -------- YOLO 权重 --------
     "YOLO_WEIGHTS": os.path.join(PROJECT_ROOT, "YOLO_training", "runs_yolo11_from_scratch", "y11_from_images_img1280", "weights", "best.pt"),
-    "YOLO_MODEL_YAML": "ultralytics/cfg/models/11/yolo11.yaml",
-    "NC": 1,
+    "YOLO_MODEL_YAML": "ultralytics/cfg/models/11/yolo11.yaml",  # state_dict 加载时用
+    "NC": 1,  # 类别数（必须与训练一致）
 
     # -------- YOLO推理参数 --------
-    "IMGSZ": 1280,
-    "CONF_THRES": 0.25,
-    "IOU_THRES": 0.50,
-    "MAX_DET": 50,
+    "IMGSZ": 1280,  # 推理输入尺寸（与训练一致更稳）
+    "CONF_THRES": 0.25,  # 置信度阈值（越低召回高但噪声多）
+    "IOU_THRES": 0.50,  # NMS IoU 阈值（越低抑制越强）
+    "MAX_DET": 50,  # 单帧最大检测框数
     "DEVICE": "cuda",  # "cuda" or "cpu"
 
     # -------- 导出ROI参数 --------
-    "ROI_SIZE": 224,
-    "BBOX_EXPAND": 1.5,
-    "EXPORT_OVERLAY": True,
+    "ROI_SIZE": 224,  # ROI 输出尺寸（与动作模型输入一致）
+    "BBOX_EXPAND": 1.5,  # bbox 扩张倍率（给目标留边）
+    "EXPORT_OVERLAY": True,  # 是否输出带框 overlay 视频
 
     # -------- UI/操作 --------
-    "MOVE_STEP": 2,
+    "MOVE_STEP": 2,  # 键盘移动框时每步像素
     "WINDOW_NAME": "YOLO Review (space next / b prev / r rerun / n none / s save / u undo / 0-9 label / q next / x stop_all)",
 
     # -------- 标签显示（可扩展）--------

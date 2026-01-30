@@ -63,61 +63,61 @@ CONFIG = {
     # "dir_splits"   : 从 OUT_ROOT/train|val|test/label_x 扫描
     # "list_splits"  : 从 split_train.txt / split_val.txt / split_test.txt 读取
     # "single_root"  : 只从 DATA_ROOT(label_x/) 扫描 + val_ratio 划分（兼容旧用法）
-    "DATA_MODE": "dir_splits",
+    "DATA_MODE": "dir_splits",  # 数据集组织方式（建议与 split 脚本输出一致）
 
     # 方式A：目录结构（train/val/test）
-    "SPLIT_ROOT": os.path.join(PROJECT_ROOT, "EfficientNet_training", "splitted_dataset"),
-    "LABEL_PREFIX": "label_",
+    "SPLIT_ROOT": os.path.join(PROJECT_ROOT, "EfficientNet_training", "splitted_dataset"),  # train/val/test 根目录
+    "LABEL_PREFIX": "label_",  # 类别子目录前缀（label_0/label_1/...）
 
-
+    # 固定随机种子，保证每次采样/打乱一致
     "RANDOM_SEED": 42,
 
     # ---------------- 视频采样 ----------------
-    "NUM_FRAMES": 16,
-    "FRAME_SIZE": 224,
-    "READ_RGB": True,
+    "NUM_FRAMES": 16,  # 每个视频采样多少帧（越多时序信息越足，但更慢）
+    "FRAME_SIZE": 224,  # 送入 EfficientNet 的图像尺寸（建议与模型默认相同）
+    "READ_RGB": True,  # True 读取 RGB（cv2 默认 BGR，此处会转）
 
     # ---------------- 模型结构 ----------------
-    "NUM_CLASSES": 1,       # 二分类=1（输出logits维度=1）；多类=K（one-hot）
-    "GRU_HIDDEN": 256,
-    "GRU_LAYERS": 1,
-    "GRU_BIDIR": False,
-    "DROPOUT": 0.2,
+    "NUM_CLASSES": 1,  # 二分类=1（输出logits维度=1）；多类=K（one-hot）
+    "GRU_HIDDEN": 256,  # GRU 隐状态维度（越大容量越强，但更慢）
+    "GRU_LAYERS": 1,  # GRU 层数（多层更强但更难训）
+    "GRU_BIDIR": False,  # 是否双向 GRU（True 会增加计算/参数）
+    "DROPOUT": 0.2,  # dropout 比例（防过拟合；过大会欠拟合）
 
     # ---------------- 训练超参 ----------------
-    "EPOCHS": 30,
-    "BATCH_SIZE": 2,
-    "NUM_WORKERS": 4,
-    "LR": 3e-4,
-    "WEIGHT_DECAY": 1e-4,
-    "GRAD_CLIP_NORM": 1.0,
+    "EPOCHS": 30,  # 训练轮数
+    "BATCH_SIZE": 2,  # 批大小（受显存限制）
+    "NUM_WORKERS": 4,  # DataLoader 线程数（越大越快，但更吃 CPU）
+    "LR": 3e-4,  # 学习率（过大会发散，过小收敛慢）
+    "WEIGHT_DECAY": 1e-4,  # 权重衰减（L2 正则）
+    "GRAD_CLIP_NORM": 1.0,  # 梯度裁剪阈值（防止梯度爆炸）
 
     # ---------------- 运行配置 ----------------
-    "DEVICE": "cuda",
-    "AMP": True,
-    "LOG_EVERY": 20,
+    "DEVICE": "cuda",  # 训练设备：cuda/cpu
+    "AMP": True,  # 自动混合精度（省显存/加速）
+    "LOG_EVERY": 20,  # 每多少 step 打印一次日志
 
     # ---------------- checkpoint / resume ----------------
-    "SAVE_DIR": os.path.join(PROJECT_ROOT, "EfficientNet_training", "runs_action"),
-    "RUN_NAME": "effnetv2s_gru_binary",
-    "AUTO_RESUME": True,
-    "RESUME_CKPT": None,
-    "SAVE_EVERY_STEPS": 200,
+    "SAVE_DIR": os.path.join(PROJECT_ROOT, "EfficientNet_training", "runs_action"),  # 输出目录
+    "RUN_NAME": "effnetv2s_gru_binary",  # 本次实验名（用于区分日志/权重）
+    "AUTO_RESUME": True,  # 自动从 last/step_last 恢复
+    "RESUME_CKPT": None,  # 指定恢复 checkpoint（None 表示自动）
+    "SAVE_EVERY_STEPS": 200,  # 每 N step 保存一次 step_last（防崩溃）
 
     # ---------------- 可视化与记录 ----------------
-    "ENABLE_TENSORBOARD": True,
-    "ENABLE_CSV_LOG": True,
-    "PLOT_EVERY_EPOCH": True,
+    "ENABLE_TENSORBOARD": True,  # 是否写 TensorBoard 日志
+    "ENABLE_CSV_LOG": True,  # 是否写 CSV 训练曲线
+    "PLOT_EVERY_EPOCH": True,  # 每个 epoch 画一次 loss/metric 曲线
 
     # ---------------- 测试集评估 ----------------
-    "EVAL_TEST_EVERY_EPOCH": False,   # True：每个epoch都跑一次test（慢）
-    "EVAL_TEST_AT_END": True,         # True：训练结束跑一次test
+    "EVAL_TEST_EVERY_EPOCH": False,  # True：每个epoch都跑一次test（慢）
+    "EVAL_TEST_AT_END": True,  # True：训练结束跑一次test
 
     # ---------------- 早停（防过拟合） ----------------
-    "EARLY_STOP": True,
-    "EARLY_STOP_PATIENCE": 10,        # 连续多少个 epoch 无提升就停止
-    "EARLY_STOP_MIN_DELTA": 0.0,      # 认为“有提升”的最小 val_loss 下降
-    "EARLY_STOP_WARMUP": 0,           # 前 N 个 epoch 不启用早停
+    "EARLY_STOP": True,  # 是否启用早停
+    "EARLY_STOP_PATIENCE": 10,  # 连续多少个 epoch 无提升就停止
+    "EARLY_STOP_MIN_DELTA": 0.0,  # 认为“有提升”的最小 val_loss 下降
+    "EARLY_STOP_WARMUP": 0,  # 前 N 个 epoch 不启用早停
 }
 
 

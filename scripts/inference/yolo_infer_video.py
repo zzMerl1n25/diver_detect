@@ -27,30 +27,36 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 # ---------------------- 超参数（全部集中在开头） --------------
 # ============================================================
 
-VIDEO_PATH = r"C:\Users\Administrator\Desktop\sonar_track\data\test_video\1.mp4"
+VIDEO_PATH = r"C:\Users\Administrator\Desktop\sonar_track\data\test_video\1.mp4"  # 原始视频路径
 
+# YOLO 权重与模型结构
 WEIGHTS_PATH = r"C:\Users\Administrator\Desktop\sonar_track\YOLO_training\runs_yolo11_from_scratch\y11_from_images_img1280\weights\last.pt"
-YOLO11_YAML = "ultralytics/cfg/models/11/yolo11.yaml"
+YOLO11_YAML = "ultralytics/cfg/models/11/yolo11.yaml"  # 兼容 state_dict 加载
 NC = 1  # 你的类别数（一定要和训练一致）
 
-IMGSZ = 1280
-CONF_THRES = 0.20
-IOU_THRES = 0.50
-MAX_DET = 300
+# 推理超参
+IMGSZ = 1280  # 推理输入尺寸（与训练一致更稳）
+CONF_THRES = 0.20  # 置信度阈值（越低召回高但噪声多）
+IOU_THRES = 0.50  # NMS IoU 阈值（越低抑制更强）
+MAX_DET = 300  # 单帧最大检测框数
 
-START_FRAME = 0
-END_FRAME = -1
-FRAME_STRIDE = 1
+# 帧范围/步长
+START_FRAME = 0  # 从第几帧开始
+END_FRAME = -1  # -1 表示到最后一帧
+FRAME_STRIDE = 1  # 帧步长（>1 表示跳帧）
 
+# 设备
 DEVICE = "cuda"  # "cuda" or "cpu"
 
+# 输出配置
 OUTPUT_DIR = os.path.join(ROOT_DIR, "runs_infer")
 OUTPUT_NAME = "infer_diff_overlay"
 
-DRAW_LABEL = True
-DRAW_CONF = True
-LINE_THICKNESS = 2
-FONT_SCALE = 0.6
+# 画框显示配置
+DRAW_LABEL = True  # 是否显示类别名
+DRAW_CONF = True  # 是否显示置信度
+LINE_THICKNESS = 2  # 框线粗细
+FONT_SCALE = 0.6  # 字体大小
 
 # ============================================================
 # 预处理参数（与你提供的预处理脚本保持一致）
@@ -61,45 +67,48 @@ MASK_RECTS = [
     # (860, 470, 1280, 720),
 ]
 
+# 扇形 mask：手动（更稳定）
 USE_MANUAL_SECTOR = False
-APEX_X = 640
-APEX_Y = 710
-RADIUS_MIN = 0
-RADIUS_MAX = 720
-ANGLE_LEFT_DEG = -35.0
-ANGLE_RIGHT_DEG = 35.0
-SECTOR_MASK_STEP_DEG = 0.2
+APEX_X = 640  # 扇形顶点 x
+APEX_Y = 710  # 扇形顶点 y
+RADIUS_MIN = 0  # 最小半径（可去掉中心盲区）
+RADIUS_MAX = 720  # 最大半径
+ANGLE_LEFT_DEG = -35.0  # 左边界角度
+ANGLE_RIGHT_DEG = 35.0  # 右边界角度
+SECTOR_MASK_STEP_DEG = 0.2  # 角度采样步长（越小越平滑）
 
+# 扇形 mask：自动（手动关时启用）
 USE_AUTO_SECTOR_IF_MANUAL_FALSE = True
-AUTO_BLACK_THRESH = 8
-AUTO_MORPH_KERNEL = 9
-AUTO_KEEP_LARGEST_CONTOUR = True
+AUTO_BLACK_THRESH = 8  # 自动阈值（背景黑边阈值）
+AUTO_MORPH_KERNEL = 9  # 形态学核大小
+AUTO_KEEP_LARGEST_CONTOUR = True  # 只保留最大连通域
 
-USE_CLAHE = False
-CLAHE_CLIP_LIMIT = 2.0
-CLAHE_TILE_GRID_SIZE = (8, 8)
+# 强度归一化/对比度增强
+USE_CLAHE = False  # 是否启用 CLAHE（可能放大噪声）
+CLAHE_CLIP_LIMIT = 2.0  # CLAHE 强度
+CLAHE_TILE_GRID_SIZE = (8, 8)  # CLAHE 网格大小
 
-PCT_CLIP_LOW = 0.5
-PCT_CLIP_HIGH = 99.5
-EPS = 1e-6
+PCT_CLIP_LOW = 0.5  # 百分位下裁剪
+PCT_CLIP_HIGH = 99.5  # 百分位上裁剪
+EPS = 1e-6  # 防止除零
 
-OUTPUT_GRAYSCALE = False
-OUTPUT_3CH = True
+OUTPUT_GRAYSCALE = False  # 输出单通道
+OUTPUT_3CH = True  # 输出 3 通道（与 YOLO 训练一致）
 
 RESIZE_TO = None  # 例如 (1280, 720)；None 表示不resize（要和训练一致）
 
 # 降噪
-DENOISE_ENABLE = False
+DENOISE_ENABLE = False  # 是否启用降噪
 DENOISE_METHOD = "bilateral"  # "bilateral" | "nlm" | "median" | "gaussian" | "none"
-BILATERAL_D = 9
-BILATERAL_SIGMA_COLOR = 30
-BILATERAL_SIGMA_SPACE = 10
-NLM_H = 10
-NLM_TEMPLATE_W = 7
-NLM_SEARCH_W = 21
-MEDIAN_KSIZE = 3
-GAUSSIAN_KSIZE = 3
-GAUSSIAN_SIGMA = 0
+BILATERAL_D = 9  # 双边滤波：邻域直径
+BILATERAL_SIGMA_COLOR = 30  # 双边滤波：强度域平滑
+BILATERAL_SIGMA_SPACE = 10  # 双边滤波：空间域平滑
+NLM_H = 10  # NLM 降噪强度
+NLM_TEMPLATE_W = 7  # NLM 模板窗口
+NLM_SEARCH_W = 21  # NLM 搜索窗口
+MEDIAN_KSIZE = 3  # 中值滤波核（奇数）
+GAUSSIAN_KSIZE = 3  # 高斯滤波核（奇数）
+GAUSSIAN_SIGMA = 0  # 高斯 sigma（0 表示自动估计）
 
 
 # ============================================================

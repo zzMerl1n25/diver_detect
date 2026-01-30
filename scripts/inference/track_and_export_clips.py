@@ -16,50 +16,50 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # ===================== 配置区 =====================
 
-DETECTIONS_CSV = os.path.join(ROOT_DIR, "runs_infer", "infer_diff_overlay_detections.csv")
-VIDEO_PATH     = r"C:\Users\Administrator\Desktop\sonar_track\data\test_video\1.mp4"
+DETECTIONS_CSV = os.path.join(ROOT_DIR, "runs_infer", "infer_diff_overlay_detections.csv")  # YOLO 推理输出 CSV
+VIDEO_PATH     = r"C:\Users\Administrator\Desktop\sonar_track\data\test_video\1.mp4"  # 原视频路径（兜底）
 DIFF_VIDEO_PATH = ""  # 填 diff 视频路径就用 diff 底图，否则用 VIDEO_PATH
 
-OUTPUT_DIR = os.path.join(ROOT_DIR, "runs_track")
-OUTPUT_VIDEO_NAME = "tracked_overlay.mp4"
+OUTPUT_DIR = os.path.join(ROOT_DIR, "runs_track")  # 跟踪输出目录
+OUTPUT_VIDEO_NAME = "tracked_overlay.mp4"  # 叠框视频名
 
 # 跟踪参数
-IOU_MATCH_THRES = 0.30
-MAX_AGE = 10
+IOU_MATCH_THRES = 0.10  # IoU 匹配阈值（越大越严格）
+MAX_AGE = 20  # 轨迹最大“失配”帧数（超过即删除）
 
 # ✅ 这些是“最终保留轨迹”的过滤（summary/clip 用）
-MIN_HITS = 5
-MIN_MEAN_CONF = 0.25
+MIN_HITS = 5  # 轨迹最少命中帧数
+MIN_MEAN_CONF = 0.25  # 轨迹平均置信度门槛
 
-USE_CONF_FILTER = True
-CONF_FILTER = 0.20
+USE_CONF_FILTER = True  # 是否先过滤低置信检测框
+CONF_FILTER = 0.20  # 低置信过滤阈值（检测层）
 
 # ===================== ✅ 去除短轨迹噪声：显示/写出闸门 =====================
 # 轨迹至少命中多少帧才“允许出现在画面/写tracks.csv”
-MIN_HITS_TO_SHOW = 5              # 建议与 MIN_HITS 一致，或略小(3~5)
+MIN_HITS_TO_SHOW = 5  # 建议与 MIN_HITS 一致，或略小(3~5)
 
 # 最近窗口内至少命中多少次才显示（抑制断续噪声）
-RECENT_WINDOW = 10                # 看最近10帧
-RECENT_MIN_HITS = 4               # 这10帧里至少命中4次才显示（可调 3~7）
+RECENT_WINDOW = 10  # 看最近10帧
+RECENT_MIN_HITS = 2  # 这10帧里至少命中4次才显示（可调 3~7）
 
 # 若轨迹刚创建，允许一点“孵化期”
-WARMUP_ALLOW = True
-WARMUP_MAX_FRAMES = 8             # 轨迹生命前8帧内，只要 hits>=2 就允许显示（可关）
+WARMUP_ALLOW = True  # 是否开启孵化期
+WARMUP_MAX_FRAMES = 8  # 轨迹生命前8帧内，只要 hits>=2 就允许显示（可关）
 
 # EMA 平滑（让框更稳）
-USE_EMA = True
-EMA_ALPHA = 0.7                   # 越大越平滑(更粘旧框)；0.6~0.85
+USE_EMA = True  # 是否用 EMA 平滑框坐标
+EMA_ALPHA = 0.7  # 越大越平滑(更粘旧框)；0.6~0.85
 
 # 导出 clip
-EXPORT_CLIPS = True
-CLIP_LEN = 64
-CLIP_MARGIN = 1.5
-CLIP_FPS = 7
+EXPORT_CLIPS = True  # 是否按轨迹导出 ROI clips
+CLIP_LEN = 64  # 每个 clip 的帧数
+CLIP_MARGIN = 1.5  # bbox 扩张倍率（避免裁剪过紧）
+CLIP_FPS = 7  # 输出 clip 帧率
 
 # 可视化
-DRAW_BOX = True
-DRAW_ID = True
-DRAW_CONF = True
+DRAW_BOX = True  # 是否画框
+DRAW_ID = True  # 是否画 track id
+DRAW_CONF = True  # 是否画置信度
 
 # ===================== 实现区 =====================
 
@@ -94,6 +94,12 @@ def clamp_xyxy(xyxy, w, h):
 
 class Track:
     def __init__(self, tid, frame_id, det):
+        """
+        轨迹状态：
+        - tid: 轨迹ID
+        - hits/conf_sum: 累计命中与置信度统计
+        - history: 每帧的框/置信度历史（用于连续性过滤）
+        """
         self.tid = tid
         self.last_frame = frame_id
         self.age = 0

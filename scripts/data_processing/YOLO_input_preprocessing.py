@@ -34,24 +34,31 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 # ============================================================
 
 # ---------- 输入输出（批量） ----------
-VIDEO_DIR = os.path.join(ROOT_DIR, "data", "sonar_video")              # ✅ 输入：包含多个视频的文件夹（可递归）
-OUTPUT_DIR = os.path.join(ROOT_DIR, "data", "processed_sonar_video")   # ✅ 输出：所有处理结果写到这里
+# ✅ 输入：包含多个视频的文件夹（可递归）
+VIDEO_DIR = os.path.join(ROOT_DIR, "data", "sonar_video")
+# ✅ 输出：所有处理结果写到这里（每个视频一个子目录）
+OUTPUT_DIR = os.path.join(ROOT_DIR, "data", "processed_sonar_video")
 
-VIDEO_EXTS = (".mp4", ".avi", ".mov", ".mkv", ".ts", ".m4v")  # ✅ 支持的视频后缀（按需增删）
+# ✅ 支持的视频后缀（按需增删；不在列表内的文件会被忽略）
+VIDEO_EXTS = (".mp4", ".avi", ".mov", ".mkv", ".ts", ".m4v")
 
-OUTPUT_FPS = 7                         # 下游处理的目标帧率（None 表示保持原视频帧率）
-RESIZE_TO = None                       # 例如 (1280, 720)；None 表示保持原分辨率
+# 下游处理的目标帧率（None 表示保持原视频帧率；降低可减小数据量）
+OUTPUT_FPS = 7
+# 输出分辨率（None 表示保持原分辨率；改变会影响后续坐标系）
+RESIZE_TO = None  # 例如 (1280, 720)
 
 # ---------- 输出格式（写盘） ----------
 # 输出为视频文件时，一般建议统一用 mp4（兼容性好）
-OUTPUT_VIDEO_EXT = ".mp4"              # 输出视频后缀（建议 .mp4）
-OUTPUT_FOURCC = "mp4v"                 # mp4 常用 fourcc：mp4v（更通用）；也可试 "avc1"/"H264"（依赖环境）
+OUTPUT_VIDEO_EXT = ".mp4"  # 输出视频后缀（建议 .mp4）
+# mp4 常用 fourcc：mp4v（更通用）；也可试 "avc1"/"H264"（依赖环境）
+OUTPUT_FOURCC = "mp4v"
 
 # 是否同时输出“处理后视频(proc)”和“帧差视频(diff)”
 WRITE_PROC_VIDEO = True
-WRITE_DIFF_VIDEO = True                # 只有 DIFF_OUTPUT=True 且 WRITE_DIFF_VIDEO=True 才会写 diff
+# 只有 DIFF_OUTPUT=True 且 WRITE_DIFF_VIDEO=True 才会写 diff
+WRITE_DIFF_VIDEO = True
 
-# 是否保存扇形 mask 图片（每个视频保存一张 sector_mask.png）
+# 是否保存扇形 mask 图片（每个视频保存一张 sector_mask.png，便于核对）
 WRITE_SECTOR_MASK_PNG = True
 
 # ---------- UI / 叠加层遮罩（把字幕、小窗等遮掉） ----------
@@ -61,34 +68,52 @@ MASK_RECTS = [
 ]
 
 # ---------- 扇形有效区域（声呐扇形区域） ----------
+# 扇形 mask：手动模式（更可控/稳定）
 USE_MANUAL_SECTOR = False
+# 扇形顶点（声呐扇形的“原点”坐标，单位像素）
 APEX_X = 640
 APEX_Y = 710
+# 扇形半径范围（像素）；min 可用于切掉中心盲区
 RADIUS_MIN = 0
 RADIUS_MAX = 720
+# 扇形左右边界角度（单位：度）
 ANGLE_LEFT_DEG = -35.0
 ANGLE_RIGHT_DEG = 35.0
+# 生成扇形多边形的角度步长（越小越精细但更慢）
 SECTOR_MASK_STEP_DEG = 0.2
 
+# 扇形 mask：自动模式（手动关闭时启用）
 USE_AUTO_SECTOR_IF_MANUAL_FALSE = True
+# 自动阈值：低于该灰度认为是背景/黑边
 AUTO_BLACK_THRESH = 8
+# 形态学核大小（越大越平滑，但可能吃掉细节）
 AUTO_MORPH_KERNEL = 9
+# 仅保留最大轮廓（防止噪声小块干扰）
 AUTO_KEEP_LARGEST_CONTOUR = True
 
 # ---------- 强度归一化 ----------
+# 是否启用 CLAHE（局部对比度增强；可能放大噪声）
 USE_CLAHE = False
+# CLAHE 裁剪限制（越大对比度增强越强）
 CLAHE_CLIP_LIMIT = 2.0
+# CLAHE 网格大小（越大越平滑）
 CLAHE_TILE_GRID_SIZE = (8, 8)
 
+# 百分位裁剪（稳健归一化；去除异常亮点/暗点）
 PCT_CLIP_LOW = 0.5
 PCT_CLIP_HIGH = 99.5
+# 防止除零的极小值
 EPS = 1e-6
 
 # ---------- 输出给模型的帧格式 ----------
+# 是否输出单通道灰度
 OUTPUT_GRAYSCALE = False
+# 是否输出 3 通道（与 YOLO 训练一致更安全）
 OUTPUT_3CH = True
 
+# 是否输出帧差（diff）作为额外视频
 DIFF_OUTPUT = True
+# diff 计算使用“处理后帧”（True）或原帧（False）
 DIFF_USE_PROCESSED_FRAME = True
 
 
@@ -99,8 +124,10 @@ DIFF_USE_PROCESSED_FRAME = True
 # - 声呐常见“散斑噪声(speckle)”会被 CLAHE 放大，因此建议：
 #   先降噪 -> 再做强度归一化/CLAHE
 # - 这里默认用 bilateral（保边平滑，效果/速度折中）
-DENOISE_ENABLE = False                 # 是否启用降噪（建议先开着对比）
-DENOISE_METHOD = "bilateral"           # "bilateral" | "nlm" | "median" | "gaussian" | "none"
+# 是否启用降噪（建议先开着对比）
+DENOISE_ENABLE = False
+# 降噪算法选择：bilateral/nlm/median/gaussian/none
+DENOISE_METHOD = "bilateral"
 
 # --- bilateral 参数（推荐优先调它） ---
 # d: 邻域直径（越大越平滑，通常 5~11）

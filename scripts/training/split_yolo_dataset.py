@@ -33,13 +33,19 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 # -----------------------------
 # 默认超参（你也可以用命令行覆盖）
 # -----------------------------
+# 输入数据集目录（images/ + labels/）
 DEFAULT_INPUT_DIR = os.path.join(PROJECT_ROOT, "YOLO_training", "yolo_dataset")
+# 输出目录（会生成 images/train|val|test + labels/train|val|test）
 DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "YOLO_training", "yolo_dataset_split")
+# 训练/验证/测试比例（三者之和应为 1.0）
 DEFAULT_TRAIN = 0.8
 DEFAULT_VAL = 0.1
 DEFAULT_TEST = 0.1
+# 随机种子（random 模式下可复现）
 DEFAULT_SEED = 42
+# temporal 分割时的“隔离带”（防止相邻帧泄漏）
 DEFAULT_GAP = 0  # 建议：如果帧很多，gap=10~50 会更靠谱
+# 支持的图片扩展名（其他后缀会被忽略）
 DEFAULT_IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
 
 # 用于从文件名里提取帧号：默认抓最后一段纯数字

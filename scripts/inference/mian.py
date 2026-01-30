@@ -100,8 +100,8 @@ DEVICE = "cuda"  # cuda/cpu
 YOLO_INPUT_MODE = "proc"
 
 # 视频帧范围（原视频帧号）
-START_FRAME = 0
-END_FRAME = -1
+START_FRAME = 0  # 从第几帧开始
+END_FRAME = -1  # -1 表示到最后一帧
 # 帧步长：=1 全帧；>1 表示跳帧（注意会影响 diff/track 对齐）
 FRAME_STRIDE = 1
 
@@ -163,7 +163,7 @@ GAUSSIAN_KSIZE = 3
 GAUSSIAN_SIGMA = 0
 
 # YOLO 输出
-YOLO_SAVE_JSON = True
+YOLO_SAVE_JSON = True  # 是否保存 detections.json
 # ✅ 若 Action 使用 diff 作为输入，必须输出 diff_base.mp4
 YOLO_SAVE_DIFF_BASE = True   # 纯diff底图（无框）
 YOLO_SAVE_OVERLAY = True     # 输出 yolo_overlay_diff（diff底图+框）
@@ -184,7 +184,7 @@ USE_CONF_FILTER = True
 CONF_FILTER = 0.20
 
 # 显示/写出轨迹的闸门（决定 tracks.csv 是否写入）
-MIN_HITS_TO_SHOW = 2
+MIN_HITS_TO_SHOW = 2  # 轨迹命中多少帧才开始展示/写出
 # 最近窗口长度（单位：帧；<=0 表示关闭连续性过滤）
 RECENT_WINDOW = 5
 # 最近窗口内最少命中次数
@@ -198,9 +198,9 @@ USE_EMA = True
 EMA_ALPHA = 0.7
 
 # 画框/ID/置信度显示开关
-TRACK_DRAW_BOX = True
-TRACK_DRAW_ID = True
-TRACK_DRAW_CONF = True
+TRACK_DRAW_BOX = True  # 是否画 bbox
+TRACK_DRAW_ID = True  # 是否画 track id
+TRACK_DRAW_CONF = True  # 是否画置信度
 
 # 是否在 tracking 阶段把“底图”预处理成 proc 再画框
 # True: 即使输入是原视频，也会显示为 proc 背景
@@ -217,7 +217,7 @@ ACTION_CKPT = os.path.join(ROOT_DIR, "EfficientNet_training", "runs_action", "ef
 # - "raw": 原始视频帧（内部会做 preprocess_frame）
 # - "diff": 已生成的 diff 视频帧（不再做 preprocess_frame）
 ACTION_INPUT_MODE = "diff"
-# 每条轨迹采样多少帧做动作分类
+# 每条轨迹采样多少帧做动作分类（与训练采样一致更稳）
 ACTION_NUM_FRAMES = 16
 # ROI 输入尺寸（模型输入）
 ACTION_FRAME_SIZE = 224
@@ -255,8 +255,8 @@ ACTION_OVERLAY_DIFF_OUT_NAME = "action_overlay_diff.mp4"
 ACTION_OVERLAY_RAW_OUT_NAME = "action_overlay_raw.mp4"
 
 # 中文字体（PIL 绘字用）
-TEXT_FONT_PATH = r"C:\Windows\Fonts\simhei.ttf"
-TEXT_FONT_SIZE_BASE = 24
+TEXT_FONT_PATH = r"C:\Windows\Fonts\simhei.ttf"  # Windows 常见中文字体路径
+TEXT_FONT_SIZE_BASE = 24  # 基础字号（会按分辨率缩放）
 
 # ✅ Efficient 额外输出（你刚刚要的两个视频）
 ACTION_ROI_PREVIEW_OUT_NAME = "roi_preview.mp4"            # preprocess后裁ROI，总览拼接视频
