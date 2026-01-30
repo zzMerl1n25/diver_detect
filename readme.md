@@ -125,17 +125,27 @@ YOLO_training/runs_yolo11_from_scratch/<EXP_NAME>/weights/*.pt
 动作模型训练数据由 **“目标 ROI + 帧级标签”** 自动生成。
 
 #### 4.1 生成并复核 ROI + 帧标签
-脚本：`scripts/labeling/yolo_review_and_crop.py`
+本步骤需要先自动标注一遍，再人工复核。
+
+**先自动标注（YOLO + Track）**
+- YOLO 推理：`scripts/inference/yolo_infer_video.py`
+- 跟踪并导出轨迹/裁剪：`scripts/inference/track_and_export_clips.py`
+
+**再人工复核/修正**
+- 脚本：`scripts/labeling/yolo_review_and_crop.py`
 
 流程：
-1. 对 `diff.mp4` 做 YOLO 检测
-2. 人工逐帧复核/修正框
-3. 每帧打标签（0: 非蛙人，1: 蛙人）
-4. 导出 CSV、overlay 视频、ROI 全量视频
-5. 按标签切 5 秒 clip（默认 5s / 7fps = 35 帧）
+1. 运行 `yolo_infer_video.py` 得到初始 detections
+2. 运行 `track_and_export_clips.py` 自动生成轨迹/初始标注
+3. 使用 `yolo_review_and_crop.py` 人工逐帧复核/修正框
+4. 每帧打标签（0: 非蛙人，1: 蛙人）
+5. 导出 CSV、overlay 视频、ROI 全量视频
+6. 按标签切 5 秒 clip（默认 5s / 7fps = 35 帧）
 
 运行：
 ```
+python scripts/inference/yolo_infer_video.py
+python scripts/inference/track_and_export_clips.py
 python scripts/labeling/yolo_review_and_crop.py
 ```
 主要输出：
